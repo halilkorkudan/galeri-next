@@ -24,7 +24,9 @@ interface GalleryViewerProps {
 
 export default function GalleryViewer({ files, apiUrl }: GalleryViewerProps) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-  const [isZipping, setIsZipping] = useState(false);
+  // isZipping yerine downloadingTarget kullanıyoruz. 
+  // 'selected': alt bar işlemi, 'KlasörAdı': klasör işlemi
+  const [downloadingTarget, setDownloadingTarget] = useState<string | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   // Gruplama
@@ -62,82 +64,113 @@ export default function GalleryViewer({ files, apiUrl }: GalleryViewerProps) {
     else setSelectedKeys(new Set(files.map(f => f.k)));
   };
 
-  const downloadSelected = async () => {
-    if (selectedKeys.size === 0) return;
-    setIsZipping(true);
+  // --- MERKEZİ İNDİRME FONKSİYONU ---
+  // Hem seçilenleri hem de klasörleri indirmek için bunu kullanacağız
+  const processDownload = async (targetFiles: MediaFile[], zipName: string, targetId: string) => {
+    if (targetFiles.length === 0 || downloadingTarget) return; // Zaten işlem varsa veya dosya yoksa dur.
+
+    setDownloadingTarget(targetId); // Hangi butonun döneceğini belirle
+
     try {
       const zip = new JSZip();
+      // Klasör yapısı oluşturmak yerine direkt root'a atabiliriz veya bir ana klasör içine
       const folder = zip.folder("Koleksiyon");
-      const selectedFilesList = files.filter(f => selectedKeys.has(f.k));
-
-      await Promise.all(selectedFilesList.map(async (file) => {
+      
+      await Promise.all(targetFiles.map(async (file) => {
         const encodedKey = encodeURIComponent(file.k);
+        // Dosya ismini çakışmaması için basitçe koruyoruz
+        const fileName = file.f; 
         const response = await fetch(`${apiUrl}/api/download?key=${encodedKey}`);
-        folder?.file(file.f, await response.blob());
+        folder?.file(fileName, await response.blob());
       }));
 
-      saveAs(await zip.generateAsync({ type: "blob" }), "secilenler.zip");
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, zipName);
     } catch (e) {
-      alert("Hata oluştu.");
+      alert("İndirme sırasında bir hata oluştu.");
+      console.error(e);
     } finally {
-      setIsZipping(false);
+      setDownloadingTarget(null); // İşlem bitti
     }
   };
 
-// ... Kodun üst kısımları aynı kalsın ...
+  // Alt bardaki "Seçilenleri İndir" butonu için
+  const downloadSelected = () => {
+    const selectedFilesList = files.filter(f => selectedKeys.has(f.k));
+    processDownload(selectedFilesList, "secilenler.zip", "selected");
+  };
+
+  // Yeni eklenen Klasör İndirme fonksiyonu
+  const downloadFolder = (folderName: string, groupFiles: MediaFile[]) => {
+    processDownload(groupFiles, `${folderName}.zip`, folderName);
+  };
 
   return (
     <div className="relative min-h-[50vh] pb-32">
       
       <Gallery withCaption>
         <div className="space-y-8">
-          {/* groupIndex parametresini ekledik: Hangi klasördeyiz? */}
           {Object.entries(groupedFiles).map(([folderName, groupFiles], groupIndex) => {
             const isCollapsed = collapsedFolders.has(folderName);
+            const isDownloadingThisFolder = downloadingTarget === folderName;
             
             return (
               <div key={folderName} className="bg-white rounded-2xl p-4 shadow-sm border border-zinc-100">
                 
-                <button 
-                  onClick={() => toggleFolder(folderName)}
+                {/* Klasör Header */}
+                <div 
                   className="w-full flex items-center justify-between mb-2 group select-none"
                 >
-                  <div className="flex items-center gap-3">
+                  {/* Sol Taraf: İkon, İsim ve Tıklanabilir Alan */}
+                  <div 
+                    className="flex items-center gap-3 flex-1 cursor-pointer"
+                    onClick={() => toggleFolder(folderName)}
+                  >
                     <div className={`p-2 rounded-full bg-zinc-100 text-zinc-600 transition-colors group-hover:bg-black group-hover:text-white`}>
                        {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
                     </div>
-                    <h2 className="text-2xl font-serif text-zinc-900 text-left">
+                    <h2 className="text-xl md:text-2xl font-serif text-zinc-900 text-left truncate">
                       {folderName}
                     </h2>
-                    <span className="text-xs font-sans text-zinc-400 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100">
+                    <span className="text-xs font-sans text-zinc-400 bg-zinc-50 px-2 py-1 rounded-md border border-zinc-100 shrink-0">
                       {groupFiles.length}
                     </span>
                   </div>
                   
-                  {isCollapsed && (
-                    <span className="text-xs text-zinc-400 font-sans hidden sm:block">
-                      Genişletmek için tıklayın
-                    </span>
-                  )}
-                </button>
+                  {/* Sağ Taraf: Klasörü İndir Butonu */}
+                  <div className="flex items-center gap-2">
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation(); // Klasörün kapanmasını engelle
+                            downloadFolder(folderName, groupFiles);
+                        }}
+                        disabled={!!downloadingTarget} // Herhangi bir indirme varsa pasif yap
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-50 hover:bg-zinc-100 border border-zinc-100 text-zinc-600 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Bu klasörü indir"
+                    >
+                        {isDownloadingThisFolder ? (
+                            <Loader2 size={16} className="animate-spin text-zinc-900" />
+                        ) : (
+                            <Download size={16} />
+                        )}
+                        <span className="text-xs font-semibold hidden sm:inline">
+                            {isDownloadingThisFolder ? 'Hazırlanıyor...' : 'Klasörü İndir'}
+                        </span>
+                    </button>
+                  </div>
+                </div>
 
                 {!isCollapsed && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                    {/* index parametresini ekledik: Kaçıncı fotoğraftayız? */}
                     {groupFiles.map((file, index) => {
                       const isVideo = file.t === 'video';
                       const encodedKey = encodeURIComponent(file.k);
                       const sourceUrl = `${apiUrl}/api/preview?key=${encodedKey}`;
                       const isSelected = selectedKeys.has(file.k);
-
-                      // LCP OPTİMİZASYONU BURADA:
-                      // Eğer ilk klasördeysek (groupIndex === 0) VE ilk 6 fotoğrafsa (index < 6)
-                      // Bunları "priority" (eager) yap.
                       const isPriority = groupIndex === 0 && index < 6;
 
                       return (
                         <div key={file.k} className="relative group cursor-pointer">
-                            
                             <div 
                               className={`relative aspect-[3/4] overflow-hidden bg-zinc-100 rounded-lg transition-all duration-300 
                                 ${isSelected ? 'ring-2 ring-black ring-offset-2' : 'hover:shadow-lg'}`}
@@ -145,7 +178,7 @@ export default function GalleryViewer({ files, apiUrl }: GalleryViewerProps) {
                                <div 
                                     onClick={(e) => { e.stopPropagation(); toggleSelection(file.k); }}
                                     className={`absolute top-2 right-2 z-30 p-2 rounded-full border shadow-sm transition-all duration-200
-                                      ${isSelected 
+                                      {isSelected 
                                         ? 'bg-black border-black text-white scale-110' 
                                         : 'bg-white/60 border-white/40 text-transparent hover:bg-white hover:border-white hover:text-zinc-300'
                                       }`}
@@ -183,7 +216,6 @@ export default function GalleryViewer({ files, apiUrl }: GalleryViewerProps) {
                                                 sizes="(max-width: 768px) 50vw, 20vw"
                                                 className={`object-cover transition-transform duration-700 ease-in-out ${isSelected ? 'opacity-80' : 'group-hover:scale-105'}`}
                                                 quality={60}
-                                                // İŞTE ÇÖZÜM:
                                                 priority={isPriority} 
                                             />
                                         )}
@@ -206,7 +238,7 @@ export default function GalleryViewer({ files, apiUrl }: GalleryViewerProps) {
         </div>
       </Gallery>
 
-      {/* ALT KONTROL BAR (Aynı Kalacak) */}
+      {/* ALT KONTROL BAR */}
       <div className={`fixed bottom-8 left-0 right-0 z-50 flex justify-center transition-transform duration-500 ${selectedKeys.size > 0 ? 'translate-y-0' : 'translate-y-32'}`}>
         <div className="bg-zinc-900 text-white pl-6 pr-2 py-2 rounded-full shadow-2xl flex items-center gap-6 mx-4 max-w-md w-full justify-between ring-1 ring-white/10 backdrop-blur-md">
           <div className="flex items-center gap-4">
@@ -224,15 +256,16 @@ export default function GalleryViewer({ files, apiUrl }: GalleryViewerProps) {
           </div>
           <button
             onClick={downloadSelected}
-            disabled={isZipping}
-            className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full text-sm font-bold hover:bg-zinc-200 active:scale-95 transition-all shadow-lg"
+            // Artık downloadingTarget state'ine bakıyoruz
+            disabled={!!downloadingTarget}
+            className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full text-sm font-bold hover:bg-zinc-200 active:scale-95 transition-all shadow-lg disabled:opacity-70"
           >
-            {isZipping ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            {isZipping ? '...' : 'İndir'}
+            {/* Sadece 'selected' işlemi yapılıyorsa spinner göster */}
+            {downloadingTarget === 'selected' ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+            {downloadingTarget === 'selected' ? '...' : 'İndir'}
           </button>
         </div>
       </div>
     </div>
   );
-
 }
