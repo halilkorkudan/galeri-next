@@ -182,7 +182,7 @@ export default async function Home() {
                     <Instagram size={14} /> Instagram
                 </Link>
                 <a href="https://www.hefayazilim.com" target="_blank" className="hover:text-zinc-900 transition-colors">Web Sitesi</a>
-                <a href="mailto:iletisim@hefayazilim.com" className="hover:text-zinc-900 transition-colors">İletişim</a>
+                <a href="mailto:info@hefayazilim.com" className="hover:text-zinc-900 transition-colors">İletişim</a>
             </div>
             
             <div className="mt-8 text-xs text-zinc-300">
