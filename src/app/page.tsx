@@ -1,5 +1,5 @@
 import GalleryViewer, { MediaFile } from '../components/GalleryViewer';
-
+export const runtime = 'edge';
 // SENİN API ADRESİN
 const API_URL = "https://api.golcukfuar.site";
 const EVENT_NAME = "golcuk-fuar-2024"; 
