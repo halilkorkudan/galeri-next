@@ -2,9 +2,32 @@ import GalleryViewer, { MediaFile } from '../components/GalleryViewer';
 import { Camera, Heart, Sparkles, Instagram, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next'; 
 
 export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  title: 'Gölcük Evlilik Fuarı 2026 | Dijital Galeri',
+  description: 'Fuarın en özel anları burada! HEFA Yazılım altyapısı ile fotoğraflarınızı yüksek kalitede inceleyin ve indirin.',
+  openGraph: {
+    title: 'Gölcük Evlilik Fuarı 2026 | Dijital Galeri',
+    description: 'En özel anlarınız HEFA Yazılım güvencesiyle dijitalleştirildi. Fotoğraflarınızı hemen indirin.',
+    url: 'https://galeri.golcukfuar.site',
+    siteName: 'Gölcük Fuarı Galeri',
+    locale: 'tr_TR',
+    type: 'website',
+    images: [
+      {
+        url: 'https://galeri.golcukfuar.site/og-image.jpg', // public klasörüne attığın resim
+        width: 1200,
+        height: 630,
+        alt: 'Gölcük Evlilik Fuarı 2026 | Dijital Galeri',
+      },
+    ],
+  },
+};
+
 
 const API_URL = "https://api.golcukfuar.site";
 const EVENT_NAME = "golcuk-fuar-2024"; 
@@ -53,7 +76,7 @@ export default async function Home() {
             <div className="w-8 h-8 bg-zinc-900 text-white flex items-center justify-center rounded-lg shadow-lg">
                 <span className="font-bold font-serif">G</span>
             </div>
-            <span className="text-sm font-semibold tracking-tight text-zinc-600">Gölcük 2024</span>
+            <span className="text-sm font-semibold tracking-tight text-zinc-600">Gölcük 2026</span>
         </div>
         
         {/* Instagram Linki (Sağ Üst) */}
@@ -163,7 +186,7 @@ export default async function Home() {
             </div>
             
             <div className="mt-8 text-xs text-zinc-300">
-                &copy; 2024 Gölcük Evlilik Fuarı. Tüm hakları saklıdır.
+                &copy; 2026 Gölcük Evlilik Fuarı. Tüm hakları saklıdır.
             </div>
         </div>
       </footer>
