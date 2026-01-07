@@ -166,7 +166,6 @@ export default function GalleryViewer({ files, apiUrl }: GalleryViewerProps) {
                                 >
                                     {({ ref, open }) => (
                                     <div 
-                                        // @ts-ignore
                                         ref={ref} 
                                         onClick={open}
                                         className="w-full h-full relative" 
