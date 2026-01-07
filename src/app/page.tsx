@@ -1,5 +1,5 @@
 import GalleryViewer, { MediaFile } from '../components/GalleryViewer';
-//export const runtime = 'edge';
+export const runtime = 'edge';
 export const dynamic = 'force-dynamic';
 // SENİN API ADRESİN
 const API_URL = "https://api.golcukfuar.site";
